@@ -1,0 +1,606 @@
+// World Car Service - Sistema de Gestao
+// Banco: PostgreSQL (Supabase)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// ACESSO E PESSOAS
+// ============================================================
+
+enum Papel {
+  ADMIN // dono, acesso total
+  GERENTE // operacao + financeiro + RH
+  ATENDENTE // orcamentos, clientes, entrada/saida
+  TECNICO // executa servicos, vistoria
+}
+
+enum Setor {
+  LAVAGEM
+  FUNILARIA
+  PINTURA
+  ESTETICA
+  PELICULA
+  MECANICA
+  ADMINISTRATIVO
+}
+
+model Usuario {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  senhaHash    String
+  papel        Papel     @default(ATENDENTE)
+  ativo        Boolean   @default(true)
+  ultimoAcesso DateTime?
+  criadoEm     DateTime  @default(now())
+
+  funcionario Funcionario?
+
+  @@map("usuarios")
+}
+
+model Funcionario {
+  id         String    @id @default(cuid())
+  matricula  String    @unique
+  nome       String
+  cpf        String?   @unique
+  rg         String?
+  nascimento DateTime?
+  telefone   String?
+  email      String?
+  endereco   String?
+
+  cargo       String
+  setor       Setor     @default(ADMINISTRATIVO)
+  admissao    DateTime
+  demissao    DateTime?
+  salario     Decimal   @default(0) @db.Decimal(10, 2)
+  comissaoPct Decimal   @default(0) @db.Decimal(5, 2) // % sobre servicos executados
+  ativo       Boolean   @default(true)
+  observacoes String?
+
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+  usuarioId String?  @unique
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  orcamentosCriados Orcamento[]        @relation("OrcamentoVendedor")
+  entradas          OrdemServico[]     @relation("OSEntrada")
+  saidas            OrdemServico[]     @relation("OSSaida")
+  itensExecutados   OrdemServicoItem[]
+  vistorias         Vistoria[]
+  ponto             RegistroPonto[]
+  ocorrencias       OcorrenciaRH[]
+  comissoes         Comissao[]
+
+  @@index([ativo])
+  @@map("funcionarios")
+}
+
+// ============================================================
+// CLIENTES E VEICULOS
+// ============================================================
+
+enum TipoPessoa {
+  FISICA
+  JURIDICA
+}
+
+model Cliente {
+  id           String     @id @default(cuid())
+  tipo         TipoPessoa @default(FISICA)
+  nome         String
+  documento    String?    @unique // CPF ou CNPJ
+  telefone     String
+  telefone2    String?
+  email        String?
+  cep          String?
+  endereco     String?
+  numero       String?
+  bairro       String?
+  cidade       String?
+  uf           String?
+  observacoes  String?
+  ativo        Boolean    @default(true)
+  criadoEm     DateTime   @default(now())
+  atualizadoEm DateTime   @updatedAt
+
+  veiculos   Veiculo[]
+  orcamentos Orcamento[]
+  ordens     OrdemServico[]
+  alertas    Alerta[]
+
+  @@index([nome])
+  @@map("clientes")
+}
+
+model Veiculo {
+  id          String  @id @default(cuid())
+  placa       String  @unique
+  marca       String
+  modelo      String
+  ano         Int?
+  cor         String?
+  chassi      String?
+  renavam     String?
+  km          Int?
+  observacoes String?
+
+  cliente   Cliente @relation(fields: [clienteId], references: [id])
+  clienteId String
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  orcamentos Orcamento[]
+  ordens     OrdemServico[]
+  alertas    Alerta[]
+
+  @@index([clienteId])
+  @@map("veiculos")
+}
+
+// ============================================================
+// CATALOGO DE SERVICOS
+// ============================================================
+
+enum CategoriaServico {
+  LAVAGEM
+  ESTETICA
+  FUNILARIA
+  PINTURA
+  PELICULA
+  REVITALIZACAO
+  VITRIFICACAO
+  MECANICA
+  OUTROS
+}
+
+model Servico {
+  id           String           @id @default(cuid())
+  codigo       String           @unique
+  nome         String
+  descricao    String?
+  categoria    CategoriaServico @default(OUTROS)
+  preco        Decimal          @default(0) @db.Decimal(10, 2)
+  custo        Decimal          @default(0) @db.Decimal(10, 2)
+  duracaoMin   Int              @default(60) // tempo estimado em minutos
+  garantiaDias Int              @default(0) // gera alerta de retorno
+  comissaoPct  Decimal          @default(0) @db.Decimal(5, 2)
+  ativo        Boolean          @default(true)
+  criadoEm     DateTime         @default(now())
+
+  itensOrcamento OrcamentoItem[]
+  itensOS        OrdemServicoItem[]
+
+  @@index([categoria])
+  @@map("servicos")
+}
+
+// ============================================================
+// ORCAMENTOS
+// ============================================================
+
+enum StatusOrcamento {
+  RASCUNHO
+  ENVIADO
+  APROVADO
+  RECUSADO
+  EXPIRADO
+  CONVERTIDO // virou ordem de servico
+}
+
+model Orcamento {
+  id     String          @id @default(cuid())
+  numero Int             @unique @default(autoincrement())
+  status StatusOrcamento @default(RASCUNHO)
+
+  cliente   Cliente @relation(fields: [clienteId], references: [id])
+  clienteId String
+  veiculo   Veiculo @relation(fields: [veiculoId], references: [id])
+  veiculoId String
+
+  vendedor   Funcionario? @relation("OrcamentoVendedor", fields: [vendedorId], references: [id])
+  vendedorId String?
+
+  validadeDias Int      @default(10)
+  validoAte    DateTime
+  kmVeiculo    Int?
+
+  subtotal     Decimal @default(0) @db.Decimal(10, 2)
+  descontoTipo String  @default("VALOR") // VALOR | PERCENTUAL
+  desconto     Decimal @default(0) @db.Decimal(10, 2)
+  total        Decimal @default(0) @db.Decimal(10, 2)
+
+  prazoEntregaDias Int?
+  formaPagamento   String?
+  observacoes      String?
+  motivoRecusa     String?
+
+  aprovadoEm   DateTime?
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+
+  itens OrcamentoItem[]
+  ordem OrdemServico?
+
+  @@index([status])
+  @@index([clienteId])
+  @@map("orcamentos")
+}
+
+model OrcamentoItem {
+  id          String    @id @default(cuid())
+  orcamento   Orcamento @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
+  orcamentoId String
+
+  servico   Servico? @relation(fields: [servicoId], references: [id])
+  servicoId String?
+
+  descricao  String
+  quantidade Decimal @default(1) @db.Decimal(10, 2)
+  precoUnit  Decimal @default(0) @db.Decimal(10, 2)
+  desconto   Decimal @default(0) @db.Decimal(10, 2)
+  total      Decimal @default(0) @db.Decimal(10, 2)
+  ordem      Int     @default(0)
+
+  @@index([orcamentoId])
+  @@map("orcamento_itens")
+}
+
+// ============================================================
+// ORDEM DE SERVICO - ENTRADA E SAIDA
+// ============================================================
+
+enum StatusOS {
+  AGUARDANDO // veiculo na loja, fila
+  EM_ANDAMENTO
+  PAUSADA
+  PRONTA // finalizada, aguardando retirada
+  ENTREGUE
+  CANCELADA
+}
+
+enum StatusItemOS {
+  PENDENTE
+  EXECUTANDO
+  CONCLUIDO
+  CANCELADO
+}
+
+model OrdemServico {
+  id     String   @id @default(cuid())
+  numero Int      @unique @default(autoincrement())
+  status StatusOS @default(AGUARDANDO)
+
+  orcamento   Orcamento? @relation(fields: [orcamentoId], references: [id])
+  orcamentoId String?    @unique
+
+  cliente   Cliente @relation(fields: [clienteId], references: [id])
+  clienteId String
+  veiculo   Veiculo @relation(fields: [veiculoId], references: [id])
+  veiculoId String
+
+  // --- ENTRADA ---
+  dataEntrada          DateTime    @default(now())
+  funcionarioEntrada   Funcionario @relation("OSEntrada", fields: [funcionarioEntradaId], references: [id])
+  funcionarioEntradaId String
+  kmEntrada            Int?
+  combustivelEntrada   String? // 0, 1/4, 1/2, 3/4, CHEIO
+  observacoesEntrada   String?
+
+  // --- SAIDA ---
+  dataSaida          DateTime?
+  funcionarioSaida   Funcionario? @relation("OSSaida", fields: [funcionarioSaidaId], references: [id])
+  funcionarioSaidaId String?
+  kmSaida            Int?
+  observacoesSaida   String?
+  clienteRetirou     String? // nome de quem retirou
+  documentoRetirada  String?
+  assinaturaEntrega  String? // dataURL PNG assinado na tela no ato da entrega
+
+  previsaoEntrega DateTime?
+
+  subtotal Decimal @default(0) @db.Decimal(10, 2)
+  desconto Decimal @default(0) @db.Decimal(10, 2)
+  total    Decimal @default(0) @db.Decimal(10, 2)
+
+  observacoes  String?
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  itens       OrdemServicoItem[]
+  vistorias   Vistoria[]
+  lancamentos Lancamento[]
+  alertas     Alerta[]
+  comissoes   Comissao[]
+
+  @@index([status])
+  @@index([clienteId])
+  @@map("ordens_servico")
+}
+
+model OrdemServicoItem {
+  id      String       @id @default(cuid())
+  ordem   OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+  ordemId String
+
+  servico   Servico? @relation(fields: [servicoId], references: [id])
+  servicoId String?
+
+  descricao  String
+  quantidade Decimal @default(1) @db.Decimal(10, 2)
+  precoUnit  Decimal @default(0) @db.Decimal(10, 2)
+  desconto   Decimal @default(0) @db.Decimal(10, 2)
+  total      Decimal @default(0) @db.Decimal(10, 2)
+
+  status        StatusItemOS @default(PENDENTE)
+  responsavel   Funcionario? @relation(fields: [responsavelId], references: [id])
+  responsavelId String?
+  iniciadoEm    DateTime?
+  concluidoEm   DateTime?
+  garantiaDias  Int          @default(0)
+
+  @@index([ordemId])
+  @@map("os_itens")
+}
+
+// ============================================================
+// VISTORIA
+// ============================================================
+
+enum TipoVistoria {
+  ENTRADA
+  SAIDA
+}
+
+model Vistoria {
+  id      String       @id @default(cuid())
+  tipo    TipoVistoria
+  ordem   OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+  ordemId String
+
+  funcionario   Funcionario @relation(fields: [funcionarioId], references: [id])
+  funcionarioId String
+
+  data        DateTime @default(now())
+  km          Int?
+  combustivel String?
+
+  // checklist estruturado { item: "OK" | "AVARIA" | "NA" }
+  checklist Json @default("{}")
+  // avarias marcadas no mapa do veiculo
+  avarias   Json @default("[]")
+
+  pertences         String? // objetos deixados no veiculo
+  observacoes       String?
+  assinaturaCliente String? // dataURL da assinatura
+  aprovadaCliente   Boolean @default(false)
+
+  fotos VistoriaFoto[]
+
+  criadoEm DateTime @default(now())
+
+  @@index([ordemId])
+  @@map("vistorias")
+}
+
+model VistoriaFoto {
+  id         String   @id @default(cuid())
+  vistoria   Vistoria @relation(fields: [vistoriaId], references: [id], onDelete: Cascade)
+  vistoriaId String
+  // Caminho dentro do bucket privado do Supabase Storage, nao uma URL publica.
+  // As URLs de exibicao sao assinadas na hora (ver src/lib/storage.ts).
+  caminho    String
+  legenda    String?
+  criadoEm   DateTime @default(now())
+
+  @@index([vistoriaId])
+  @@map("vistoria_fotos")
+}
+
+// ============================================================
+// ALERTAS (retorno, garantia, finalizacao)
+// ============================================================
+
+enum TipoAlerta {
+  RETORNO_GARANTIA // cliente deve voltar para revisao do servico
+  RETORNO_MANUTENCAO // recorrencia (ex: lavagem mensal, vitrificacao)
+  ORCAMENTO_EXPIRANDO
+  ENTREGA_ATRASADA
+  POS_VENDA // contato de satisfacao apos finalizacao bem sucedida
+  FINANCEIRO_VENCIMENTO
+}
+
+enum StatusAlerta {
+  PENDENTE
+  CONCLUIDO
+  CANCELADO
+}
+
+model Alerta {
+  id     String       @id @default(cuid())
+  tipo   TipoAlerta
+  status StatusAlerta @default(PENDENTE)
+
+  titulo    String
+  descricao String?
+  dataAlvo  DateTime
+
+  cliente   Cliente?      @relation(fields: [clienteId], references: [id])
+  clienteId String?
+  veiculo   Veiculo?      @relation(fields: [veiculoId], references: [id])
+  veiculoId String?
+  ordem     OrdemServico? @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+  ordemId   String?
+
+  concluidoEm DateTime?
+  resultado   String? // anotacao do contato feito
+  criadoEm    DateTime  @default(now())
+
+  @@index([status, dataAlvo])
+  @@map("alertas")
+}
+
+// ============================================================
+// FINANCEIRO
+// ============================================================
+
+enum TipoLancamento {
+  RECEITA
+  DESPESA
+}
+
+enum StatusLancamento {
+  PENDENTE
+  PAGO
+  ATRASADO
+  CANCELADO
+}
+
+enum FormaPagamento {
+  DINHEIRO
+  PIX
+  DEBITO
+  CREDITO
+  BOLETO
+  TRANSFERENCIA
+  OUTRO
+}
+
+model CategoriaFinanceira {
+  id    String         @id @default(cuid())
+  nome  String         @unique
+  tipo  TipoLancamento
+  ativo Boolean        @default(true)
+
+  lancamentos Lancamento[]
+
+  @@map("categorias_financeiras")
+}
+
+model Lancamento {
+  id     String           @id @default(cuid())
+  tipo   TipoLancamento
+  status StatusLancamento @default(PENDENTE)
+
+  descricao  String
+  valor      Decimal         @db.Decimal(10, 2)
+  vencimento DateTime
+  pagamento  DateTime?
+  forma      FormaPagamento?
+
+  categoria   CategoriaFinanceira? @relation(fields: [categoriaId], references: [id])
+  categoriaId String?
+
+  ordem   OrdemServico? @relation(fields: [ordemId], references: [id])
+  ordemId String?
+
+  parcela       Int? // 1 de N
+  totalParcelas Int?
+  fornecedor    String?
+  observacoes   String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([status, vencimento])
+  @@index([tipo])
+  @@map("lancamentos")
+}
+
+// ============================================================
+// RH
+// ============================================================
+
+model RegistroPonto {
+  id                 String      @id @default(cuid())
+  funcionario        Funcionario @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+  funcionarioId      String
+  data               DateTime    @db.Date
+  entrada            DateTime?
+  saidaAlmoco        DateTime?
+  voltaAlmoco        DateTime?
+  saida              DateTime?
+  minutosTrabalhados Int         @default(0)
+  observacoes        String?
+
+  @@unique([funcionarioId, data])
+  @@map("registros_ponto")
+}
+
+enum TipoOcorrenciaRH {
+  FERIAS
+  FALTA
+  ATESTADO
+  ADVERTENCIA
+  SUSPENSAO
+  TREINAMENTO
+  ELOGIO
+  OUTRO
+}
+
+model OcorrenciaRH {
+  id            String           @id @default(cuid())
+  funcionario   Funcionario      @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+  funcionarioId String
+  tipo          TipoOcorrenciaRH
+  inicio        DateTime
+  fim           DateTime?
+  descricao     String?
+  criadoEm      DateTime         @default(now())
+
+  @@index([funcionarioId])
+  @@map("ocorrencias_rh")
+}
+
+model Comissao {
+  id            String       @id @default(cuid())
+  funcionario   Funcionario  @relation(fields: [funcionarioId], references: [id])
+  funcionarioId String
+  ordem         OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade)
+  ordemId       String
+
+  baseCalculo Decimal   @db.Decimal(10, 2)
+  percentual  Decimal   @db.Decimal(5, 2)
+  valor       Decimal   @db.Decimal(10, 2)
+  pago        Boolean   @default(false)
+  pagoEm      DateTime?
+  referencia  String // "2026-09"
+
+  criadoEm DateTime @default(now())
+
+  @@index([funcionarioId, referencia])
+  @@map("comissoes")
+}
+
+// ============================================================
+// CONFIGURACAO DA EMPRESA (cabecalho dos PDFs)
+// ============================================================
+
+model Empresa {
+  id                   String   @id @default("default")
+  nome                 String
+  cnpj                 String?
+  telefone             String?
+  whatsapp             String?
+  email                String?
+  endereco             String?
+  cidade               String?
+  uf                   String?
+  cep                  String?
+  instagram            String?
+  logoUrl              String?
+  observacoesOrcamento String?
+  atualizadoEm         DateTime @updatedAt
+
+  @@map("empresa")
+}

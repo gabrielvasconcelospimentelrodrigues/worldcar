@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/* ============================================================
+   World Car Service - identidade: preto, branco, vermelho
+   ============================================================ */
+
+@theme {
+  --color-marca-50: #fef2f2;
+  --color-marca-100: #fee2e2;
+  --color-marca-200: #fecaca;
+  --color-marca-300: #fca5a5;
+  --color-marca-400: #f87171;
+  --color-marca-500: #e11d2e;
+  --color-marca-600: #c81222;
+  --color-marca-700: #a30f1c;
+  --color-marca-800: #7f0c16;
+  --color-marca-900: #5c0810;
+
+  --color-carvao-50: #f7f7f8;
+  --color-carvao-100: #eeeef0;
+  --color-carvao-200: #d9d9de;
+  --color-carvao-300: #b8b8c0;
+  --color-carvao-400: #8e8e99;
+  --color-carvao-500: #6e6e7a;
+  --color-carvao-600: #565662;
+  --color-carvao-700: #434350;
+  --color-carvao-800: #2a2a33;
+  --color-carvao-900: #17171d;
+  --color-carvao-950: #0b0b0f;
+
+  --font-display: var(--font-titulo), system-ui, sans-serif;
+}
+
+:root {
+  --fundo: #ffffff;
+  --texto: #17171d;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--fundo);
+  color: var(--texto);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Foco visivel e consistente em toda a aplicacao */
+:focus-visible {
+  outline: 2px solid var(--color-marca-500);
+  outline-offset: 2px;
+}
+
+/* Barra de rolagem discreta nas areas escuras do sistema */
+.rolagem-escura::-webkit-scrollbar {
+  width: 8px;
+}
+.rolagem-escura::-webkit-scrollbar-thumb {
+  background: var(--color-carvao-700);
+  border-radius: 999px;
+}
+
+/* Textura diagonal usada nos blocos de destaque da landing */
+.listras-marca {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(225, 29, 46, 0.14) 0px,
+    rgba(225, 29, 46, 0.14) 2px,
+    transparent 2px,
+    transparent 10px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   Impressao: usado pelas vias em papel de orcamento / OS / vistoria
+   ============================================================ */
+@media print {
+  .nao-imprimir {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  .quebra-pagina {
+    break-after: page;
+  }
+}
