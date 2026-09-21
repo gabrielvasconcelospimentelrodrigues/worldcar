@@ -1,18 +1,51 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "//": [
+    "A Vercel constroi a partir da RAIZ do repositorio, e aqui a raiz guarda o",
+    "app Next.js antigo — cujo `build` roda `prisma generate && next build`. Era",
+    "isso que a plataforma estava construindo, e por isso o deploy quebrava.",
+    "",
+    "Estes comandos apontam a construcao para `web/`, que e a SPA em uso. O",
+    "`framework: null` desliga a deteccao automatica de Next.js: sem ele a",
+    "Vercel ignora o que esta escrito aqui e tenta adivinhar de novo."
+  ],
+
+  "framework": null,
+  "installCommand": "cd web && npm install",
+  "buildCommand": "cd web && npm run build",
+  "outputDirectory": "web/dist",
+
   "regions": ["gru1"],
-  "functions": {
-    "src/app/sistema/*/[id]/pdf/route.ts": {
-      "memory": 1536,
-      "maxDuration": 60
-    }
-  },
+
+  "//rewrites": [
+    "Sem esta reescrita, recarregar /sistema/ordens da 404: nao existe esse",
+    "arquivo no servidor. Quem resolve a rota e o React, ja dentro do",
+    "navegador, entao todo caminho precisa entregar o index.html.",
+    "",
+    "A excecao de /assets/ evita que um arquivo que falte volte como HTML: o",
+    "navegador receberia uma pagina onde esperava JavaScript e o erro ficaria",
+    "irreconhecivel."
+  ],
+  "rewrites": [
+    { "source": "/assets/(.*)", "destination": "/assets/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+
   "headers": [
     {
+      "//": "O sistema interno nao deve aparecer em busca.",
       "source": "/sistema/(.*)",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
         { "key": "Referrer-Policy", "value": "same-origin" }
+      ]
+    },
+    {
+      "//": "Os arquivos com hash no nome nunca mudam de conteudo; podem ficar em cache por um ano.",
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     },
     {
