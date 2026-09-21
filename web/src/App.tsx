@@ -6,6 +6,7 @@ import { Logo } from "./componentes/logo";
 import { LayoutSistema } from "./telas/layout";
 import { Entrar } from "./telas/entrar";
 import { Site } from "./telas/site";
+import { Agendar } from "@/telas/agendar";
 import { Painel } from "./telas/painel";
 import { Clientes } from "./telas/clientes";
 import { FichaCliente } from "./telas/cliente-ficha";
@@ -22,6 +23,7 @@ import { FichaVistoria } from "./telas/vistoria-ficha";
 import { Alertas } from "./telas/alertas";
 import { Financeiro } from "./telas/financeiro";
 import { RH } from "./telas/rh";
+import { Agenda } from "@/telas/agenda";
 import { Relatorios } from "@/telas/relatorios";
 import { ProgramaFidelidade } from "@/telas/fidelidade";
 import { Configuracoes } from "./telas/configuracoes";
@@ -63,6 +65,8 @@ export function App() {
     <Routes>
       {/* Site institucional, publico */}
       <Route path="/" element={<Site />} />
+      {/* Publica: o visitante agenda sem login. */}
+      <Route path="/agendar" element={<Agendar />} />
 
       <Route
         path="/entrar"
@@ -164,6 +168,10 @@ export function App() {
         <Route
           path="cotacoes/:id"
           element={<Protegida modulo="compras"><FichaCotacao /></Protegida>}
+        />
+        <Route
+          path="agenda"
+          element={<Protegida modulo="agenda"><Agenda /></Protegida>}
         />
         <Route
           path="relatorios"

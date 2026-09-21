@@ -6,11 +6,15 @@ import {
 import { BlocoEndereco } from "@/componentes/bloco-endereco";
 import { EMPRESA } from "@/lib/empresa-info";
 import { dadosEmpresa } from "@/lib/consultas";
+import { ConfigAgenda } from "@/componentes/config-agenda";
 import { mensagemErro, sb } from "@/lib/supabase";
 import type { Empresa } from "@/lib/tipos";
 import { mascararDocumento, mascararTelefone, soDigitos } from "@/lib/mascaras";
 
+type AbaConfig = "empresa" | "agenda";
+
 export function Configuracoes() {
+  const [abaConfig, setAbaConfig] = useState<AbaConfig>("empresa");
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -65,8 +69,25 @@ export function Configuracoes() {
   return (
     <>
       <TituloPagina titulo="Configurações"
-        descricao="Dados que aparecem no cabeçalho dos PDFs de orçamento, OS e vistoria." />
+        descricao="Dados da empresa e regras da agenda." />
 
+      <nav aria-label="Seções das configurações" className="mb-6 flex flex-wrap gap-2">
+        {([["empresa", "Empresa"], ["agenda", "Agenda"]] as const).map(([k, r]) => (
+          <button key={k} type="button" onClick={() => setAbaConfig(k)}
+            aria-current={abaConfig === k ? "page" : undefined}
+            className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
+              abaConfig === k
+                ? "bg-carvao-950 text-white"
+                : "border border-carvao-300 bg-white text-carvao-700 hover:border-carvao-500"}`}>
+            {r}
+          </button>
+        ))}
+      </nav>
+
+      {abaConfig === "agenda" && <ConfigAgenda />}
+
+      {abaConfig === "empresa" && (
+      <>
       <div className="grid gap-6 lg:grid-cols-[1.4fr_0.6fr]">
         <Cartao>
           <CabecalhoCartao titulo="Dados da empresa" />
@@ -133,6 +154,8 @@ export function Configuracoes() {
           </p>
         </Cartao>
       </div>
+      </>
+      )}
     </>
   );
 }

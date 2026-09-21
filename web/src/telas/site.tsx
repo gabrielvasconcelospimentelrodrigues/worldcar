@@ -18,13 +18,14 @@ import {
   whatsappLink,
 } from "@/lib/empresa-info";
 import { IconeInstagram } from "@/componentes/icone-instagram";
-import { CatalogoSite } from "@/componentes/catalogo-site";
+import { VitrineServicos } from "@/componentes/vitrine-servicos";
 
 const MSG_PADRAO = `Olá! Vim pelo site da ${EMPRESA.nome} e gostaria de um orçamento.`;
 
 const NAV = [
   { href: "#servicos", label: "Serviços" },
   { href: "#precos", label: "Preços" },
+  { href: "#agendar", label: "Agendar" },
   { href: "#processo", label: "Como funciona" },
   { href: "#diferenciais", label: "Diferenciais" },
   { href: "#contato", label: "Contato" },
@@ -80,14 +81,12 @@ export function Site() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <a
-              href={whatsappLink(MSG_PADRAO)}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/agendar"
               className="rounded-md bg-marca-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-marca-600"
             >
-              Orçamento
-            </a>
+              Agendar
+            </Link>
             <Link
               to="/entrar"
               className="hidden rounded-md border border-carvao-700 px-3 py-2 text-sm font-medium text-carvao-300 transition hover:border-carvao-500 hover:text-white sm:block"
@@ -276,29 +275,31 @@ export function Site() {
           </div>
         </section>
 
-        {/* ---------- Tabela de preços ---------- */}
+        {/* ---------- Serviços e visita ---------- */}
         <section id="precos" className="scroll-mt-20 border-y border-carvao-200 bg-carvao-50 py-20">
           <div className="mx-auto max-w-6xl px-4">
             <header className="max-w-2xl">
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-marca-500">
-                Tabela de preços
+                Serviços e horários
               </p>
               <h2 className="mt-3 font-display text-4xl font-extrabold uppercase tracking-tight text-carvao-950 sm:text-5xl">
-                Preço na mesa, sem surpresa
+                Escolha, veja o horário e reserve
               </h2>
               <p className="mt-4 text-lg text-carvao-600">
-                Publicamos o que cobramos. Cada serviço com prazo, garantia e valor de
-                partida — você decide antes de trazer o carro.
+                Cada serviço tem preço, duração e garantia à vista na hora de marcar.
+                Sem ligar, sem esperar retorno.
               </p>
+              <div id="agendar" className="mt-6 scroll-mt-20">
+                <Link to="/agendar"
+                  className="inline-flex items-center gap-2 rounded-md bg-marca-500 px-7 py-3.5 font-display text-base font-bold uppercase tracking-wide text-white transition hover:bg-marca-600">
+                  Agendar online
+                  <ArrowRight className="h-5 w-5" aria-hidden />
+                </Link>
+              </div>
             </header>
 
             <div className="mt-12">
-              <CatalogoSite
-                aoPedirOrcamento={(servico) =>
-                  whatsappLink(
-                    `Olá! Vim pelo site e gostaria de um orçamento de ${servico}.`,
-                  )}
-              />
+              <VitrineServicos />
             </div>
           </div>
         </section>

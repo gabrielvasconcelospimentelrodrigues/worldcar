@@ -19,6 +19,7 @@ export type Modulo =
   | "orcamentos"
   | "ordens"
   | "vistorias"
+  | "agenda"
   | "alertas"
   | "clientes"
   | "servicos"
@@ -34,6 +35,8 @@ export const PERMISSOES: Record<Modulo, Papel[]> = {
   orcamentos: ["ADMIN", "GERENTE", "ATENDENTE"],
   ordens: ["ADMIN", "GERENTE", "ATENDENTE", "TECNICO"],
   vistorias: ["ADMIN", "GERENTE", "ATENDENTE", "TECNICO"],
+  // O tecnico precisa ver o que chega no dia para se organizar.
+  agenda: ["ADMIN", "GERENTE", "ATENDENTE", "TECNICO"],
   alertas: ["ADMIN", "GERENTE", "ATENDENTE"],
   clientes: ["ADMIN", "GERENTE", "ATENDENTE"],
   servicos: ["ADMIN", "GERENTE"],

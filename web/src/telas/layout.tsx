@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
-  BarChart3, BellRing, Car, Gift, ClipboardCheck, ClipboardList, FileText, LayoutDashboard,
+  BarChart3, BellRing, CalendarDays, Car, Gift, ClipboardCheck, ClipboardList, FileText, LayoutDashboard,
   LogOut, Menu, Scale, Settings, Truck, Users, Wallet, Wrench, X,
 } from "lucide-react";
 import { Logo } from "@/componentes/logo";
@@ -14,6 +14,7 @@ const MENU: { para: string; rotulo: string; icone: typeof Car; modulo: Modulo }[
   { para: "/sistema", rotulo: "Painel", icone: LayoutDashboard, modulo: "dashboard" },
   { para: "/sistema/orcamentos", rotulo: "Orçamentos", icone: FileText, modulo: "orcamentos" },
   { para: "/sistema/ordens", rotulo: "Ordens de serviço", icone: ClipboardList, modulo: "ordens" },
+  { para: "/sistema/agenda", rotulo: "Agenda", icone: CalendarDays, modulo: "agenda" },
   { para: "/sistema/vistorias", rotulo: "Vistorias", icone: ClipboardCheck, modulo: "vistorias" },
   { para: "/sistema/alertas", rotulo: "Alertas", icone: BellRing, modulo: "alertas" },
   { para: "/sistema/clientes", rotulo: "Clientes e veículos", icone: Car, modulo: "clientes" },
